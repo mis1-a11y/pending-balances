@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pending Balance Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    background: #f5f6f8;
+    color: #1a2c3d;
+  }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 32px 16px; }
+
+  .header { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #123c6b; padding-bottom: 16px; margin-bottom: 24px; }
+  .header .bar { width: 6px; height: 40px; background: #123c6b; border-radius: 2px; }
+  .header h1 { font-family: 'Marcellus', Georgia, serif; font-weight: 400; font-size: 24px; color: #123c6b; margin: 0; letter-spacing: -0.01em; }
+  .header p { font-size: 14px; color: #64798d; margin: 2px 0 0; }
+
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { background: #ffffff; border: 1px solid #dfe4ea; border-radius: 8px; padding: 16px; }
+  .card p.label { font-size: 12px; color: #64798d; margin: 0 0 4px; }
+  .card p.value { font-size: 20px; font-weight: 600; margin: 0; font-variant-numeric: tabular-nums; }
+  .value.pending { color: #123c6b; }
+  .value.overdue { color: #9b3a2f; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .date-filter { display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #dfe4ea; border-radius: 8px; padding: 0 8px 0 12px; }
+  .date-filter .df-label { font-size: 12px; color: #64798d; white-space: nowrap; }
+  .date-filter .df-to { font-size: 12px; color: #9fb0bf; }
+  .date-filter input[type="date"] { border: none; outline: none; background: transparent; padding: 10px 0; font-size: 13px; font-family: inherit; color: #1a2c3d; }
+  .date-filter .btn { padding: 6px 10px; font-size: 12px; }
+  .search { flex: 1; display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1px solid #dfe4ea; border-radius: 8px; padding: 0 12px; }
+  .search input { border: none; outline: none; background: transparent; width: 100%; padding: 10px 0; font-size: 14px; }
+  .search svg { flex-shrink: 0; color: #9fb0bf; }
+  .btn { cursor: pointer; border: none; font-size: 14px; border-radius: 8px; padding: 10px 16px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn-primary { background: #123c6b; color: #fff; }
+  .btn-primary:hover { background: #0d2c4f; }
+  .btn-dark { background: #0d2c4f; color: #fff; }
+  .btn-dark:hover { background: #081c30; }
+  .btn-outline { background: #ffffff; color: #1a2c3d; border: 1px solid #dfe4ea; }
+  .btn-outline:hover { background: #eef2f5; }
+  .btn-ghost { background: transparent; color: #9fb0bf; padding: 6px; }
+  .btn-ghost:hover { color: #b91c1c; }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+  .form-card { background: #ffffff; border: 1px solid #dfe4ea; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .form-card .form-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .form-card .form-head p { font-family: 'Marcellus', Georgia, serif; font-weight: 400; font-size: 14px; margin: 0; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid input, .form-grid select {
+    border: 1px solid #dfe4ea; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; outline: none; background: #ffffff;
+  }
+  .form-grid input:focus, .form-grid select:focus { border-color: #3b7ec4; }
+  .field-label { display: block; font-size: 12px; color: #64798d; margin-bottom: 4px; }
+  .save-btn { margin-top: 12px; width: 100%; padding: 10px; }
+
+  .empty { text-align: center; font-size: 14px; color: #9fb0bf; padding: 40px 0; }
+
+  .entry { background: #ffffff; border-left: 4px solid #123c6b; border-top: 1px solid #dfe4ea; border-right: 1px solid #dfe4ea; border-bottom: 1px solid #dfe4ea; border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .entry-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; }
+  .entry-row .name { font-weight: 500; color: #1a2c3d; margin: 0; }
+  .entry-row .meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #64798d; margin: 2px 0 0; flex-wrap: wrap; }
+  .entry-row .meta span { display: flex; align-items: center; gap: 4px; }
+  .entry-right { display: flex; align-items: center; gap: 12px; }
+  .badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .badge.red { background: #faeceb; color: #9b3a2f; border-color: #e8c4bf; }
+  .badge.amber { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+  .badge.green { background: #f0fdf4; color: #2E7D52; border-color: #bbf7d0; }
+  .badge.slate { background: #eef2f5; color: #4d6178; border-color: #dfe4ea; }
+  .balance { font-weight: 600; width: 96px; text-align: right; color: #1a2c3d; font-variant-numeric: tabular-nums; }
+  .pay-btn { font-size: 12px; padding: 6px 10px; }
+  .chevron { color: #9fb0bf; }
+
+  .details { border-top: 1px solid #eef2f5; padding: 12px 16px; display: none; }
+  .details.open { display: block; }
+  .details .row-summary { display: flex; justify-content: space-between; font-size: 12px; color: #64798d; margin-bottom: 8px; }
+  .details .hist-label { font-size: 12px; font-weight: 500; color: #4d6178; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .details ul { list-style: none; margin: 0 0 12px; padding: 0; font-size: 12px; color: #4d6178; }
+  .details ul li { display: flex; justify-content: space-between; padding: 2px 0; }
+  .details .no-pay { font-size: 12px; color: #9fb0bf; margin-bottom: 12px; }
+  .pay-row { display: flex; gap: 8px; align-items: center; }
+  .add-btn { font-size: 12px; padding: 6px 12px; }
+
+  .amount-field { display: flex; align-items: center; border: 1px solid #dfe4ea; border-radius: 6px; background: #ffffff; }
+  .amount-field:focus-within { border-color: #3b7ec4; }
+  .amount-field .prefix { padding-left: 12px; color: #64798d; font-size: 14px; }
+  .amount-field input { border: none; outline: none; background: transparent; padding: 8px 12px 8px 4px; font-size: 14px; width: 100%; font-variant-numeric: tabular-nums; }
+  .pay-row .amount-field { flex: 1; }
+  .pay-row .amount-field .prefix { padding-left: 8px; font-size: 12px; }
+  .pay-row .amount-field input { padding: 6px 8px 6px 2px; font-size: 12px; }
+  .pay-row input.note { flex: 1; border: 1px solid #dfe4ea; border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+  .mode-select { border: 1px solid #dfe4ea; border-radius: 6px; padding: 6px 8px; font-size: 12px; background: #ffffff; width: 120px; flex-shrink: 0; }
+
+  /* Follow-up form */
+  .customer-select {
+    display: block; width: 100%; cursor: pointer; font-size: 14px; border-radius: var(--radius, 8px);
+    padding: 10px 16px; margin-bottom: 12px; background: #123c6b; color: #fff; border: none;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 14px;
+  }
+  .customer-select:hover { background-color: #0d2c4f; }
+  .customer-select option { color: #1a2c3d; background: #ffffff; }
+
+  .type-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+  .type-btn { flex: 1; padding: 10px; border: 1px solid #dfe4ea; border-radius: 6px; background: #ffffff; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #4d6178; }
+  .type-btn.active { background: #123c6b; color: #fff; border-color: #123c6b; }
+
+  .screenshot-input-btn { border: 1px dashed #c7d2dc; border-radius: 8px; padding: 14px; text-align: center; font-size: 13px; color: #64798d; cursor: pointer; }
+  .screenshot-input-btn:hover { background: #eef2f5; }
+  .screenshot-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .screenshot-thumb { position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid #dfe4ea; }
+  .screenshot-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .screenshot-thumb .rm { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 11px; line-height: 14px; cursor: pointer; padding: 0; }
+
+  .followups .fu-item { font-size: 12px; color: #4d6178; padding: 8px 0; border-top: 1px solid #eef2f5; }
+  .followups .fu-item:first-child { border-top: none; }
+  .followups .fu-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .followups .fu-head .fu-type { display: flex; align-items: center; gap: 4px; font-weight: 500; color: #1a2c3d; }
+  .followups audio { width: 100%; margin-top: 4px; }
+  .followups .fu-thumbs { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .followups .fu-thumbs img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #dfe4ea; cursor: pointer; }
+
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 24px; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+  .lightbox .lb-close { position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  .layout { display: flex; gap: 24px; align-items: flex-start; }
+  .sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 32px; }
+  .main { flex: 1; min-width: 0; }
+
+  /* Calendar */
+  .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .calendar-grid + .calendar-grid { margin-top: 4px; }
+  .calendar-weekday { text-align: center; font-size: 11px; color: #64798d; font-weight: 500; padding-bottom: 2px; }
+  .calendar-cell { min-height: 68px; border: 1px solid #dfe4ea; border-radius: 6px; padding: 4px; font-size: 11px; background: #ffffff; }
+  .calendar-cell.other-month { opacity: 0.35; }
+  .calendar-cell.today { border-color: #123c6b; border-width: 2px; }
+  .calendar-cell .daynum { font-weight: 600; font-size: 12px; margin-bottom: 3px; color: #1a2c3d; }
+  .calendar-cell .bill-chip { display: block; background: #faeceb; color: #9b3a2f; border-radius: 4px; padding: 1px 4px; margin-bottom: 2px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Notifications */
+  .notif-stack { display: flex; flex-direction: column; gap: 10px; }
+  .nav-badge { position: absolute; top: 6px; right: 10px; background: #b91c1c; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; line-height: 1.5; }
+
+  /* Current user */
+  .user-box { background: #eef2f5; border: 1px solid #dfe4ea; border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; }
+  .user-label { display: block; font-size: 11px; color: #64798d; margin-bottom: 2px; }
+  .user-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .user-name { font-size: 13px; font-weight: 600; color: #1a2c3d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notif-card { background: #ffffff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); overflow: hidden; }
+  .notif-head { padding: 8px 12px; font-size: 12px; font-weight: 600; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .notif-head.upcoming { background: #3b7ec4; }
+  .notif-head.today { background: #b91c1c; }
+  .notif-head.overdue { background: #9b3a2f; }
+  .notif-head button { background: none; border: none; color: #fff; cursor: pointer; opacity: 0.85; padding: 0; display: flex; }
+  .notif-body { padding: 10px 12px; font-size: 12px; color: #4d6178; }
+  .notif-body .n-name { font-weight: 600; color: #1a2c3d; margin-bottom: 2px; }
+  .notif-body .n-meta { color: #64798d; }
+
+  svg { width: 14px; height: 14px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(245, 246, 248, 0.94);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.35s ease;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-card {
+    background: #ffffff; border: 1px solid #dfe4ea; border-radius: 12px;
+    padding: 36px 44px; text-align: center; box-shadow: 0 12px 32px rgba(18,60,107,0.08);
+    max-width: 280px;
+  }
+  .loading-ring {
+    width: 40px; height: 40px; margin: 0 auto 16px;
+    border: 3px solid #dfe4ea; border-top-color: #123c6b;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  .loading-card.error .loading-ring { animation: none; border-color: #fecaca; border-top-color: #b91c1c; }
+  .loading-card p.loading-title { font-size: 14px; font-weight: 600; color: #1a2c3d; margin: 0 0 4px; }
+  .loading-card p.loading-sub { font-size: 12px; color: #64798d; margin: 0; }
+  .loading-card.error p.loading-title { color: #b91c1c; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-card" id="loadingCard">
+    <div class="loading-ring"></div>
+    <p class="loading-title" id="loadingTitle">Connecting to your ledger…</p>
+    <p class="loading-sub" id="loadingSub">Fetching pending balances</p>
+  </div>
+</div>
+<div class="wrap">
+  <div class="layout">
+
+    <div class="sidebar">
+      <div class="user-box" id="userBox">
+        <span class="user-label">Working as</span>
+        <div class="user-row">
+          <span class="user-name" id="currentUserLabel">—</span>
+          <button class="btn btn-ghost" id="editUserBtn" title="Change name" style="padding:2px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="toggleHomeBtn" style="width:100%; justify-content:flex-start;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </button>
+      <button class="btn btn-outline" id="toggleAddBtn" style="width:100%; justify-content:flex-start;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add customer
+      </button>
+      <button class="btn btn-outline" id="toggleFollowUpBtn" style="width:100%; justify-content:flex-start;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Follow up
+      </button>
+      <button class="btn btn-outline" id="toggleCalendarBtn" style="width:100%; justify-content:flex-start;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendar
+      </button>
+      <button class="btn btn-outline" id="toggleNotifBtn" style="width:100%; justify-content:flex-start; position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Notifications
+        <span class="nav-badge" id="notifBadgeCount" style="display:none;"></span>
+      </button>
+    </div>
+
+    <div class="main">
+
+  <div id="homePanel">
+
+  <div class="header">
+    <div class="bar"></div>
+    <div>
+      <h1>Pending Balance Ledger</h1>
+      <p>Track customers who owe you money</p>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="card">
+      <p class="label">Total pending</p>
+      <p class="value pending" id="totalPending">₹0</p>
+    </div>
+    <div class="card">
+      <p class="label">Customers with balance</p>
+      <p class="value" id="withBalance">0</p>
+    </div>
+    <div class="card">
+      <p class="label">Overdue</p>
+      <p class="value overdue" id="overdueCount">0</p>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" placeholder="Search by name or number" />
+    </div>
+    <div class="date-filter">
+      <span class="df-label">Bill date</span>
+      <input type="date" id="filterFrom" title="From bill date" />
+      <span class="df-to">to</span>
+      <input type="date" id="filterTo" title="To bill date" />
+      <button class="btn btn-outline" id="clearDateFilter" style="display:none;">Clear</button>
+    </div>
+  </div>
+
+  <div id="entriesWrap"></div>
+
+  </div>
+
+  <div class="form-card" id="addForm" style="display:none;">
+    <div class="form-head">
+      <p>New customer</p>
+      <button class="btn btn-ghost" id="closeAddBtn" style="padding:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-grid">
+      <input id="fName" placeholder="Name" />
+      <input id="fContact" placeholder="Contact number" />
+      <div>
+        <label class="field-label">Category</label>
+        <select id="fCategory">
+          <option value="customer">Customer</option>
+          <option value="staff">Staff</option>
+        </select>
+      </div>
+      <input id="fBillNumber" placeholder="Bill number" value="GKJ/" />
+      <div class="amount-field"><span class="prefix">₹</span><input id="fAmount" type="number" placeholder="Total amount" /></div>
+      <div>
+        <label class="field-label">Bill date</label>
+        <input id="fBillDate" type="date" />
+      </div>
+      <div>
+        <label class="field-label">Due date</label>
+        <input id="fDueDate" type="date" />
+      </div>
+      <textarea id="fNarration" placeholder="Narration (optional)" style="grid-column: 1 / -1; border: 1px solid #dfe4ea; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; outline: none; resize: vertical; min-height: 44px; font-family: inherit;"></textarea>
+    </div>
+    <button class="btn btn-primary save-btn" id="saveBtn">Save</button>
+  </div>
+
+  <div class="form-card" id="followUpForm" style="display:none;">
+    <div class="form-head">
+      <p>Log a follow-up</p>
+      <button class="btn btn-ghost" id="closeFollowUpBtn" style="padding:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <select id="fuCustomer" class="customer-select"></select>
+
+    <div class="type-toggle">
+      <button class="type-btn active" id="typeCallBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Call
+      </button>
+      <button class="type-btn" id="typeMessageBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Message
+      </button>
+    </div>
+
+    <div id="callMedia" style="padding: 10px 0 12px;">
+      <label class="screenshot-input-btn" for="callFileInput" id="callFileLabel">
+        <input type="file" id="callFileInput" accept="audio/*" style="display:none;" />
+        Attach a call recording file
+      </label>
+      <audio id="recordPreview" controls style="display:none; width:100%; margin-top:10px;"></audio>
+    </div>
+
+    <div id="messageMedia" style="display:none; padding: 10px 0 12px;">
+      <label class="screenshot-input-btn" for="screenshotInput">
+        <input type="file" id="screenshotInput" accept="image/*" multiple style="display:none;" />
+        Tap to attach screenshots
+      </label>
+      <div class="screenshot-grid" id="screenshotGrid"></div>
+    </div>
+
+    <input id="fuSummary" placeholder="Summary (optional)" style="margin-top: 12px; border: 1px solid #dfe4ea; border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; outline: none;" />
+
+    <button class="btn btn-primary save-btn" id="saveFollowUpBtn">Save follow-up</button>
+  </div>
+
+  <div class="form-card" id="calendarView" style="display:none;">
+    <div class="form-head">
+      <p>Due date calendar</p>
+      <button class="btn btn-ghost" id="closeCalendarBtn" style="padding:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="calendar-nav">
+      <button class="btn btn-outline" id="calPrevBtn" style="padding:6px 10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <p id="calMonthLabel" style="font-family:'Marcellus', Georgia, serif; font-size:14px; font-weight:400; margin:0;"></p>
+      <button class="btn btn-outline" id="calNextBtn" style="padding:6px 10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="calendar-grid" id="calendarWeekdays"></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <div class="form-card" id="notifPanel" style="display:none;">
+    <div class="form-head">
+      <p>Notifications</p>
+      <button class="btn btn-ghost" id="closeNotifBtn" style="padding:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="notif-stack" id="notifStack"></div>
+  </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <img id="lightboxImg" src="" />
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged,
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+    onSnapshot, arrayUnion, increment,
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  // ---- Firebase setup --------------------------------------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuu5F40ZoT9IVA2F_4iZr7gb2sBsf2YJU",
+    authDomain: "pending-balances.firebaseapp.com",
+    projectId: "pending-balances",
+    storageBucket: "pending-balances.firebasestorage.app",
+    messagingSenderId: "891891859466",
+    appId: "1:891891859466:web:fbbdb0949301f1513d1ff3",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const customersRef = collection(db, "customers");
+
+  // ---- Data layer -------------------------------------------------------------
+  // "customers" is kept in sync in real time from Firestore via onSnapshot.
+  // Every mutation below (add / pay / remove / follow-up) writes straight to
+  // Firestore. Call recordings and screenshots are embedded directly in the
+  // Firestore document as base64 data (no Firebase Storage involved) — this
+  // keeps setup to Firestore only, but means attachments must stay small
+  // (Firestore caps a document at 1MB total).
+  let customers = [];
+  let expandedId = null;
+  const paymentDraft = {};
+  window.paymentDraft = paymentDraft; // inline oninput= handlers need this on window
+
+  // ---- Current user: whoever is using this browser, tagged onto their entries -
+  const USER_KEY = "ledgerUserName";
+  function getUserName() {
+    let name = (localStorage.getItem(USER_KEY) || "").trim();
+    if (!name) {
+      name = (window.prompt("Your name (this will show on entries you add):") || "").trim();
+      if (name) localStorage.setItem(USER_KEY, name);
+    }
+    return name || "Unknown";
+  }
+  function updateUserLabel() {
+    const name = (localStorage.getItem(USER_KEY) || "").trim();
+    document.getElementById("currentUserLabel").textContent = name || "Not set";
+  }
+  document.getElementById("editUserBtn").addEventListener("click", () => {
+    const current = localStorage.getItem(USER_KEY) || "";
+    const name = window.prompt("Your name (shown on entries you add):", current);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (trimmed) localStorage.setItem(USER_KEY, trimmed);
+    updateUserLabel();
+  });
+  updateUserLabel();
+
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  const loadingCard = document.getElementById("loadingCard");
+  const loadingTitle = document.getElementById("loadingTitle");
+  const loadingSub = document.getElementById("loadingSub");
+
+  function showLoadingError(title, sub) {
+    loadingCard.classList.add("error");
+    loadingTitle.textContent = title;
+    loadingSub.textContent = sub;
+  }
+  function hideLoadingOverlay() {
+    loadingOverlay.classList.add("hidden");
+  }
+
+  signInAnonymously(auth).catch((err) => {
+    console.error("Anonymous sign-in failed:", err);
+    showLoadingError("Couldn't connect", "Sign-in failed — check the console.");
+  });
+
+  let listening = false;
+  onAuthStateChanged(auth, (user) => {
+    if (user && !listening) {
+      listening = true;
+      onSnapshot(
+        customersRef,
+        (snapshot) => {
+          customers = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          hideLoadingOverlay();
+          render();
+          renderFollowUpCustomerOptions();
+          renderNotifications();
+          if (document.getElementById("calendarView").style.display !== "none") renderCalendar();
+        },
+        (err) => {
+          console.error("Firestore listen failed:", err);
+          showLoadingError("Couldn't load data", "Check Firestore rules, then reload.");
+        }
+      );
+    }
+  });
+
+  function balanceOf(c) {
+    const paid = (c.payments || []).reduce((s, p) => s + Number(p.amount), 0);
+    return Math.max(0, c.totalAmount - paid);
+  }
+
+  function daysUntil(dateStr) {
+    const diff = new Date(dateStr) - new Date(new Date().toDateString());
+    return Math.round(diff / 86400000);
+  }
+
+  function statusOf(c) {
+    const bal = balanceOf(c);
+    if (bal <= 0) return { label: "cleared", tone: "green" };
+    const d = daysUntil(c.dueDate);
+    if (d < 0) return { label: `overdue ${Math.abs(d)}d`, tone: "red" };
+    if (d <= 5) return { label: `due in ${d}d`, tone: "amber" };
+    return { label: "on track", tone: "slate" };
+  }
+
+  function fmt(n) {
+    return "₹" + Number(n).toLocaleString("en-IN");
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : str;
+    return div.innerHTML;
+  }
+
+  // ---- Customers: add / pay / remove ----------------------------------------
+  async function addCustomer() {
+    const name = document.getElementById("fName").value.trim();
+    const contact = document.getElementById("fContact").value.trim();
+    const category = document.getElementById("fCategory").value;
+    const billNumber = document.getElementById("fBillNumber").value.trim();
+    const totalAmount = Number(document.getElementById("fAmount").value);
+    const billDate = document.getElementById("fBillDate").value;
+    const dueDate = document.getElementById("fDueDate").value;
+    const narration = document.getElementById("fNarration").value.trim();
+    if (!name || !totalAmount || !dueDate) return;
+
+    const addedBy = getUserName();
+    const existing = contact ? customers.find((c) => (c.contact || "").trim() === contact) : null;
+    try {
+      if (existing) {
+        // Same contact already on file: add to their outstanding amount
+        // instead of creating a duplicate entry.
+        await updateDoc(doc(db, "customers", existing.id), {
+          totalAmount: increment(totalAmount),
+          dueDate,
+          category,
+          addedBy,
+          ...(billNumber ? { billNumber } : {}),
+          ...(billDate ? { billDate } : {}),
+          ...(narration ? { narration } : {}),
+        });
+      } else {
+        await addDoc(customersRef, { name, contact, category, billNumber, billDate, totalAmount, dueDate, narration, addedBy, payments: [], followUps: [] });
+      }
+    } catch (err) {
+      console.error("Failed to save customer:", err);
+      alert("Couldn't save this customer:\n\n" + (err.code || err.message || err) + "\n\nIf this says 'permission-denied', your Firestore rules need to allow signed-in (anonymous) users to write.");
+      return;
+    }
+
+    document.getElementById("fName").value = "";
+    document.getElementById("fContact").value = "";
+    document.getElementById("fCategory").value = "customer";
+    document.getElementById("fBillNumber").value = "GKJ/";
+    document.getElementById("fAmount").value = "";
+    document.getElementById("fBillDate").value = "";
+    document.getElementById("fDueDate").value = "";
+    document.getElementById("fNarration").value = "";
+    document.getElementById("addForm").style.display = "none";
+  }
+  window.addCustomer = addCustomer;
+
+  async function removeCustomer(id) {
+    try {
+      await deleteDoc(doc(db, "customers", id));
+    } catch (err) {
+      console.error("Failed to remove customer:", err);
+      alert("Couldn't remove this customer:\n\n" + (err.code || err.message || err));
+    }
+  }
+  window.removeCustomer = removeCustomer;
+
+  async function addPayment(id) {
+    const draft = paymentDraft[id];
+    if (!draft || !draft.amount) return;
+    const payment = {
+      date: new Date().toISOString().slice(0, 10),
+      amount: Number(draft.amount),
+      mode: draft.mode || "Cash",
+      note: draft.note || "Payment received",
+      by: getUserName(),
+    };
+    try {
+      await updateDoc(doc(db, "customers", id), { payments: arrayUnion(payment) });
+    } catch (err) {
+      console.error("Failed to add payment:", err);
+      alert("Couldn't save this payment:\n\n" + (err.code || err.message || err));
+      return;
+    }
+    paymentDraft[id] = { amount: "", mode: "Cash", note: "" };
+    render();
+  }
+  window.addPayment = addPayment;
+
+  function toggleExpand(id) {
+    expandedId = expandedId === id ? null : id;
+    render();
+  }
+  window.toggleExpand = toggleExpand;
+
+  function openPay(id) {
+    expandedId = id;
+    render();
+  }
+  window.openPay = openPay;
+
+  // ---- Follow-up form: call recording file / message screenshots ------------
+  let fuType = "call";
+  let audioBlob = null;
+  let screenshotFiles = [];
+
+  function renderFollowUpCustomerOptions() {
+    const sel = document.getElementById("fuCustomer");
+    const prev = sel.value;
+    const pending = customers.filter((c) => balanceOf(c) > 0);
+    sel.innerHTML = pending.length
+      ? pending.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}${c.contact ? " · " + escapeHtml(c.contact) : ""}</option>`).join("")
+      : `<option value="">No customers with pending balance</option>`;
+    if (prev) sel.value = prev;
+  }
+
+  function resetFollowUpForm() {
+    fuType = "call";
+    document.getElementById("typeCallBtn").classList.add("active");
+    document.getElementById("typeMessageBtn").classList.remove("active");
+    document.getElementById("callMedia").style.display = "block";
+    document.getElementById("messageMedia").style.display = "none";
+    document.getElementById("fuSummary").value = "";
+    audioBlob = null;
+    const preview = document.getElementById("recordPreview");
+    preview.style.display = "none";
+    preview.src = "";
+    screenshotFiles = [];
+    document.getElementById("screenshotGrid").innerHTML = "";
+    document.getElementById("screenshotInput").value = "";
+    document.getElementById("callFileInput").value = "";
+    document.getElementById("callFileLabel").textContent = "Attach a call recording file";
+  }
+
+  const PANELS = ["homePanel", "addForm", "followUpForm", "calendarView", "notifPanel"];
+  const NAV_BTNS = { homePanel: "toggleHomeBtn", addForm: "toggleAddBtn", followUpForm: "toggleFollowUpBtn", calendarView: "toggleCalendarBtn", notifPanel: "toggleNotifBtn" };
+  function showPanel(id) {
+    PANELS.forEach((p) => {
+      document.getElementById(p).style.display = p === id ? "block" : "none";
+    });
+    Object.entries(NAV_BTNS).forEach(([panel, btnId]) => {
+      const btn = document.getElementById(btnId);
+      btn.classList.toggle("btn-primary", panel === id);
+      btn.classList.toggle("btn-outline", panel !== id);
+    });
+  }
+  window.showPanel = showPanel;
+
+  document.getElementById("toggleHomeBtn").addEventListener("click", () => showPanel("homePanel"));
+
+  document.getElementById("toggleFollowUpBtn").addEventListener("click", () => {
+    showPanel("followUpForm");
+    renderFollowUpCustomerOptions();
+    resetFollowUpForm();
+  });
+  document.getElementById("closeFollowUpBtn").addEventListener("click", () => {
+    showPanel("homePanel");
+  });
+
+  document.getElementById("typeCallBtn").addEventListener("click", () => {
+    fuType = "call";
+    document.getElementById("typeCallBtn").classList.add("active");
+    document.getElementById("typeMessageBtn").classList.remove("active");
+    document.getElementById("callMedia").style.display = "block";
+    document.getElementById("messageMedia").style.display = "none";
+  });
+  document.getElementById("typeMessageBtn").addEventListener("click", () => {
+    fuType = "message";
+    document.getElementById("typeMessageBtn").classList.add("active");
+    document.getElementById("typeCallBtn").classList.remove("active");
+    document.getElementById("messageMedia").style.display = "block";
+    document.getElementById("callMedia").style.display = "none";
+  });
+
+  document.getElementById("callFileInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    audioBlob = file;
+    document.getElementById("callFileLabel").textContent = file.name;
+    const preview = document.getElementById("recordPreview");
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+  });
+
+  document.getElementById("screenshotInput").addEventListener("change", (e) => {
+    screenshotFiles = screenshotFiles.concat(Array.from(e.target.files));
+    renderScreenshotGrid();
+  });
+
+  function renderScreenshotGrid() {
+    const grid = document.getElementById("screenshotGrid");
+    grid.innerHTML = screenshotFiles
+      .map(
+        (f, i) => `
+        <div class="screenshot-thumb">
+          <img src="${URL.createObjectURL(f)}" />
+          <button class="rm" onclick="removeScreenshot(${i})">×</button>
+        </div>`
+      )
+      .join("");
+  }
+  window.removeScreenshot = function (i) {
+    screenshotFiles.splice(i, 1);
+    renderScreenshotGrid();
+  };
+
+  window.openLightbox = function (src) {
+    document.getElementById("lightboxImg").src = src;
+    document.getElementById("lightbox").classList.add("open");
+  };
+  window.closeLightbox = function () {
+    document.getElementById("lightbox").classList.remove("open");
+    document.getElementById("lightboxImg").src = "";
+  };
+
+  async function saveFollowUp() {
+    const customerId = document.getElementById("fuCustomer").value;
+    if (!customerId) {
+      alert(customers.filter((c) => balanceOf(c) > 0).length === 0 ? "No customers with a pending balance to follow up on." : "Pick a customer first.");
+      return;
+    }
+    const summary = document.getElementById("fuSummary").value.trim();
+    const btn = document.getElementById("saveFollowUpBtn");
+
+    const entry = {
+      type: fuType,
+      date: new Date().toISOString().slice(0, 10),
+      summary,
+      by: getUserName(),
+    };
+
+    // Firestore caps a document at 1MB total (all fields combined), and
+    // base64 inflates file size by ~33%. Keep a safety margin under that.
+    const MAX_TOTAL_BYTES = 700000;
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Couldn't read the file."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+
+    try {
+      if (fuType === "call") {
+        if (!audioBlob) {
+          alert("Attach a call recording first, or switch to Message.");
+          btn.disabled = false;
+          btn.textContent = "Save follow-up";
+          return;
+        }
+        if (audioBlob.size > MAX_TOTAL_BYTES) {
+          alert(
+            `This recording is too large to store directly in Firestore (${Math.round(audioBlob.size / 1024)}KB — limit is about ${Math.round(MAX_TOTAL_BYTES / 1024)}KB). Try a shorter or lower-quality recording.`
+          );
+          btn.disabled = false;
+          btn.textContent = "Save follow-up";
+          return;
+        }
+        entry.audioData = await fileToBase64(audioBlob);
+      } else {
+        if (screenshotFiles.length === 0) {
+          alert("Attach at least one screenshot, or switch to Call.");
+          btn.disabled = false;
+          btn.textContent = "Save follow-up";
+          return;
+        }
+        const totalSize = screenshotFiles.reduce((s, f) => s + f.size, 0);
+        if (totalSize > MAX_TOTAL_BYTES) {
+          alert(
+            `These screenshots are too large to store directly in Firestore (${Math.round(totalSize / 1024)}KB total — limit is about ${Math.round(MAX_TOTAL_BYTES / 1024)}KB). Try fewer screenshots or compress them first.`
+          );
+          btn.disabled = false;
+          btn.textContent = "Save follow-up";
+          return;
+        }
+        entry.screenshotData = await Promise.all(screenshotFiles.map(fileToBase64));
+      }
+
+      await updateDoc(doc(db, "customers", customerId), { followUps: arrayUnion(entry) });
+    } catch (err) {
+      console.error("Failed to save follow-up:", err);
+      alert("Couldn't save the follow-up:\n\n" + (err.code || err.message || err) + "\n\nIf this says 'permission-denied', your Firestore rules need to allow signed-in (anonymous) users to write.");
+      btn.disabled = false;
+      btn.textContent = "Save follow-up";
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Save follow-up";
+    document.getElementById("followUpForm").style.display = "none";
+  }
+  document.getElementById("saveFollowUpBtn").addEventListener("click", saveFollowUp);
+
+  // ---- Render -----------------------------------------------------------------
+  function render() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    const fromDate = document.getElementById("filterFrom").value;
+    const toDate = document.getElementById("filterTo").value;
+    document.getElementById("clearDateFilter").style.display = fromDate || toDate ? "inline-flex" : "none";
+    const filtered = customers
+      .filter(
+        (c) =>
+          !query ||
+          c.name.toLowerCase().includes(query) ||
+          (c.contact || "").includes(query) ||
+          (c.billNumber || "").toLowerCase().includes(query)
+      )
+      .filter((c) => {
+        if (!fromDate && !toDate) return true;
+        if (!c.billDate) return false; // no bill date recorded -> can't match a date filter
+        if (fromDate && c.billDate < fromDate) return false;
+        if (toDate && c.billDate > toDate) return false;
+        return true;
+      })
+      .sort((a, b) => balanceOf(b) - balanceOf(a));
+
+    const pending = customers.reduce((s, c) => s + balanceOf(c), 0);
+    const overdue = customers.filter((c) => daysUntil(c.dueDate) < 0 && balanceOf(c) > 0).length;
+    const withBalance = customers.filter((c) => balanceOf(c) > 0).length;
+
+    document.getElementById("totalPending").textContent = fmt(pending);
+    document.getElementById("overdueCount").textContent = overdue;
+    document.getElementById("withBalance").textContent = withBalance;
+
+    const wrap = document.getElementById("entriesWrap");
+
+    if (filtered.length === 0) {
+      wrap.innerHTML = `<p class="empty">${fromDate || toDate ? "No bills found for this bill date range." : "No customers found."}</p>`;
+      return;
+    }
+
+    wrap.innerHTML = filtered
+      .map((c) => {
+        const bal = balanceOf(c);
+        const status = statusOf(c);
+        const isOpen = expandedId === c.id;
+        const draft = paymentDraft[c.id] || { amount: "", mode: "Cash", note: "" };
+        const payments = c.payments || [];
+        const followUps = c.followUps || [];
+
+        const historyHtml =
+          payments.length === 0
+            ? `<p class="no-pay">No payments recorded yet.</p>`
+            : `<ul>${payments
+                .map((p) => `<li><span>${escapeHtml(p.date)} · ${escapeHtml(p.mode || "Cash")} · ${escapeHtml(p.note)}${p.by ? " · by " + escapeHtml(p.by) : ""}</span><span>${fmt(p.amount)}</span></li>`)
+                .join("")}</ul>`;
+
+        const followUpHtml =
+          followUps.length === 0
+            ? `<p class="no-pay">No follow-ups logged yet.</p>`
+            : `<div class="followups">${followUps
+                .map((f) => {
+                  const icon =
+                    f.type === "call"
+                      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
+                      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+                  const media =
+                    f.type === "call" && f.audioData
+                      ? `<audio controls src="${f.audioData}"></audio>`
+                      : f.type === "message" && f.screenshotData
+                      ? `<div class="fu-thumbs">${f.screenshotData
+                          .map((u) => `<img src="${u}" onclick="openLightbox(this.src)" />`)
+                          .join("")}</div>`
+                      : "";
+                  return `
+                    <div class="fu-item">
+                      <div class="fu-head">
+                        <span class="fu-type">${icon} ${f.type === "call" ? "Call" : "Message"}</span>
+                        <span>${escapeHtml(f.date)}${f.by ? " · " + escapeHtml(f.by) : ""}</span>
+                      </div>
+                      ${f.summary ? `<div>${escapeHtml(f.summary)}</div>` : ""}
+                      ${media}
+                    </div>`;
+                })
+                .join("")}</div>`;
+
+        return `
+        <div class="entry">
+          <div class="entry-row" onclick="toggleExpand('${c.id}')">
+            <div>
+              <p class="name">${escapeHtml(c.name)}${c.category === "staff" ? ` <span class="badge slate" style="font-size:10px; padding:2px 8px;">Staff</span>` : ""}</p>
+              <div class="meta">
+                ${c.contact ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${escapeHtml(c.contact)}</span>` : ""}
+                ${c.billNumber ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h11l5 5v15H4z"/><path d="M15 2v5h5"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg> Bill #${escapeHtml(c.billNumber)}</span>` : ""}
+                <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${escapeHtml(c.dueDate)}</span>
+                ${c.addedBy ? `<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${escapeHtml(c.addedBy)}</span>` : ""}
+              </div>
+            </div>
+            <div class="entry-right">
+              <span class="badge ${status.tone}">${status.label}</span>
+              <span class="balance">${fmt(bal)}</span>
+              ${
+                bal > 0
+                  ? `<button class="btn btn-dark pay-btn" onclick="event.stopPropagation(); openPay('${c.id}');">
+                      <span style="font-weight:600;">₹</span> Pay
+                     </button>`
+                  : ""
+              }
+              <span class="chevron">${
+                isOpen
+                  ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>`
+                  : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`
+              }</span>
+            </div>
+          </div>
+
+          <div class="details ${isOpen ? "open" : ""}">
+            <div class="row-summary">
+              <span>Total amount: ${fmt(c.totalAmount)}</span>
+              <span>Paid so far: ${fmt(c.totalAmount - bal)}</span>
+            </div>
+            ${
+              c.billDate
+                ? `<div class="row-summary"><span>Bill date: ${escapeHtml(c.billDate)}</span><span></span></div>`
+                : ""
+            }
+            ${
+              c.narration
+                ? `<div style="font-size:12px; color:#4d6178; background:#eef2f5; border-radius:6px; padding:8px 10px; margin-bottom:10px;">${escapeHtml(c.narration)}</div>`
+                : ""
+            }
+            <p class="hist-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h11l5 5v15H4z"/><path d="M15 2v5h5"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+              Payment history
+            </p>
+            ${historyHtml}
+            <div class="pay-row" style="margin-bottom: 8px;">
+              <div class="amount-field"><span class="prefix">₹</span><input class="amount" type="number" placeholder="Amount" value="${escapeHtml(draft.amount)}"
+                oninput="paymentDraft['${c.id}'] = paymentDraft['${c.id}'] || {}; paymentDraft['${c.id}'].amount = this.value;" /></div>
+              <select class="mode-select" onchange="paymentDraft['${c.id}'] = paymentDraft['${c.id}'] || {}; paymentDraft['${c.id}'].mode = this.value;">
+                ${["Cash", "UPI", "Bank transfer", "Cheque"]
+                  .map((m) => `<option value="${m}" ${draft.mode === m ? "selected" : ""}>${m}</option>`)
+                  .join("")}
+              </select>
+            </div>
+            <div class="pay-row">
+              <input class="note" placeholder="Note (optional)" value="${escapeHtml(draft.note)}"
+                oninput="paymentDraft['${c.id}'] = paymentDraft['${c.id}'] || {}; paymentDraft['${c.id}'].note = this.value;" />
+              <button class="btn btn-dark add-btn" onclick="addPayment('${c.id}')">
+                <span style="font-weight:600;">₹</span> Pay
+              </button>
+              <button class="btn btn-ghost" onclick="removeCustomer('${c.id}')" title="Remove customer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+
+            <p class="hist-label" style="margin-top: 14px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Follow-ups
+            </p>
+            ${followUpHtml}
+          </div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  document.getElementById("toggleAddBtn").addEventListener("click", () => {
+    showPanel("addForm");
+  });
+  document.getElementById("closeAddBtn").addEventListener("click", () => {
+    showPanel("homePanel");
+  });
+  document.getElementById("saveBtn").addEventListener("click", addCustomer);
+  document.getElementById("searchInput").addEventListener("input", render);
+  document.getElementById("filterFrom").addEventListener("change", render);
+  document.getElementById("filterTo").addEventListener("change", render);
+  document.getElementById("clearDateFilter").addEventListener("click", () => {
+    document.getElementById("filterFrom").value = "";
+    document.getElementById("filterTo").value = "";
+    render();
+  });
+
+  // ---- Calendar: shows which bill is due on which date -----------------------
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  let calDate = new Date();
+  calDate.setDate(1);
+
+  function toDateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  function renderCalendar() {
+    const y = calDate.getFullYear();
+    const m = calDate.getMonth();
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("calMonthLabel").textContent = `${monthNames[m]} ${y}`;
+
+    const weekdaysEl = document.getElementById("calendarWeekdays");
+    weekdaysEl.innerHTML = WEEKDAYS.map((w) => `<div class="calendar-weekday">${w}</div>`).join("");
+
+    // Map dateKey -> list of pending customers due that day
+    const dueMap = {};
+    customers.forEach((c) => {
+      if (!c.dueDate || balanceOf(c) <= 0) return;
+      (dueMap[c.dueDate] = dueMap[c.dueDate] || []).push(c);
+    });
+
+    const firstWeekday = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const daysInPrevMonth = new Date(y, m, 0).getDate();
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    const cells = [];
+    for (let i = 0; i < firstWeekday; i++) {
+      const d = daysInPrevMonth - firstWeekday + 1 + i;
+      cells.push({ d, key: null, otherMonth: true });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ d, key: toDateKey(y, m, d), otherMonth: false });
+    }
+    while (cells.length % 7 !== 0 || cells.length < 42) {
+      const d = cells.length - (firstWeekday + daysInMonth) + 1;
+      cells.push({ d, key: null, otherMonth: true });
+      if (cells.length >= 42) break;
+    }
+
+    const gridEl = document.getElementById("calendarGrid");
+    gridEl.innerHTML = cells
+      .map((cell) => {
+        const dueHere = cell.key ? dueMap[cell.key] || [] : [];
+        const isToday = cell.key === todayKey;
+        return `
+          <div class="calendar-cell ${cell.otherMonth ? "other-month" : ""} ${isToday ? "today" : ""}">
+            <div class="daynum">${cell.d}</div>
+            ${dueHere
+              .map((c) => `<span class="bill-chip" title="${escapeHtml(c.name)}${c.billNumber ? " · " + escapeHtml(c.billNumber) : ""}">${escapeHtml(c.billNumber || c.name)}</span>`)
+              .join("")}
+          </div>`;
+      })
+      .join("");
+  }
+
+  document.getElementById("toggleCalendarBtn").addEventListener("click", () => {
+    showPanel("calendarView");
+    calDate = new Date();
+    calDate.setDate(1);
+    renderCalendar();
+  });
+  document.getElementById("closeCalendarBtn").addEventListener("click", () => {
+    showPanel("homePanel");
+  });
+  document.getElementById("calPrevBtn").addEventListener("click", () => {
+    calDate.setMonth(calDate.getMonth() - 1);
+    renderCalendar();
+  });
+  document.getElementById("calNextBtn").addEventListener("click", () => {
+    calDate.setMonth(calDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  // ---- Notifications: 2 days before (yellow), on due date (red), overdue -----
+  // These no longer float over the screen as popups — they collect quietly
+  // into the Notifications panel (sidebar), with a count badge on the nav
+  // button so you know something's waiting without it interrupting you.
+  const dismissedNotifs = new Set();
+
+  function renderNotifications() {
+    const list = [];
+    customers.forEach((c) => {
+      if (!c.dueDate || balanceOf(c) <= 0) return;
+      const d = daysUntil(c.dueDate);
+      let type = null;
+      if (d === 2) type = "upcoming";
+      else if (d === 0) type = "today";
+      else if (d < 0) type = "overdue";
+      if (!type) return;
+      const key = `${c.id}-${c.dueDate}-${type}`;
+      if (dismissedNotifs.has(key)) return;
+      list.push({ key, type, c, d });
+    });
+
+    const badge = document.getElementById("notifBadgeCount");
+    if (list.length > 0) {
+      badge.style.display = "inline-block";
+      badge.textContent = list.length;
+    } else {
+      badge.style.display = "none";
+    }
+
+    const stack = document.getElementById("notifStack");
+    if (list.length === 0) {
+      stack.innerHTML = `<p class="empty">No notifications right now.</p>`;
+      return;
+    }
+    stack.innerHTML = list
+      .map(({ key, type, c, d }) => {
+        const title = type === "upcoming" ? "Coming in 2 days" : type === "today" ? "Due today" : "Overdue — didn't come";
+        const message =
+          type === "upcoming"
+            ? `${c.name} is due to pay in 2 days.`
+            : type === "today"
+            ? `${c.name} is due to pay today.`
+            : `${c.name} was due ${Math.abs(d)} day${Math.abs(d) === 1 ? "" : "s"} ago and hasn't paid yet.`;
+        return `
+          <div class="notif-card" data-key="${key}">
+            <div class="notif-head ${type}">
+              <span>${title}</span>
+              <button onclick="dismissNotif('${key}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="notif-body">
+              <div class="n-name">${escapeHtml(c.name)}${c.billNumber ? " · Bill #" + escapeHtml(c.billNumber) : ""}</div>
+              <div>${message}</div>
+              <div class="n-meta">Balance: ${fmt(balanceOf(c))} · Due: ${escapeHtml(c.dueDate)}</div>
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+  window.dismissNotif = function (key) {
+    dismissedNotifs.add(key);
+    renderNotifications();
+  };
+
+  document.getElementById("toggleNotifBtn").addEventListener("click", () => {
+    showPanel("notifPanel");
+    renderNotifications();
+  });
+  document.getElementById("closeNotifBtn").addEventListener("click", () => {
+    showPanel("homePanel");
+  });
+
+  render();
+</script>
+</body>
+</html>
